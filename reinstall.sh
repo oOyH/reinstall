@@ -1204,9 +1204,9 @@ Continue?
                 #            https://mirror.nju.edu.cn/ubuntu-cloud-images/releases/
 
                 # mirrors.cloud.tencent.com
-                ci_mirror=https://mirror.nju.edu.cn/ubuntu-releases/24.04
+                ci_mirror=https://mirror.nju.edu.cn/ubuntu-releases
             else
-                ci_mirror=https://cloud-images.ubuntu.com
+                ci_mirror=https://releases.ubuntu.com
             fi
 
             # 以下版本有 minimal 镜像
@@ -1227,23 +1227,20 @@ Continue?
             }
 
             if [ "$minimal" = 1 ]; then
-                if ! is_have_minimal_image; then
-                    error_and_exit "Minimal cloud image is not available for $releasever $basearch_alt."
-                fi
-                eval ${step}_img="$ci_mirror/minimal/releases/$codename/release/ubuntu-$releasever-minimal-cloudimg-$basearch_alt$(get_suffix).img"
-            else
-                eval ${step}_img="$ci_mirror/releases/$releasever/release/ubuntu-$releasever-server-cloudimg-$basearch_alt$(get_suffix).img"
+                warn "Desktop version does not support minimal image, switching to full desktop version."
+                minimal=0
             fi
-        else
+            # 修改为桌面版镜像命名格式
+            eval ${step}_img="$ci_mirror/$releasever/ubuntu-$releasever-desktop-$basearch_alt.iso"
             # 传统安装
             if is_in_china; then
                 case "$basearch" in
-                "x86_64") mirror=https://mirror.nju.edu.cn/ubuntu-releases/24.04/$releasever ;;
+                "x86_64") mirror=https://mirror.nju.edu.cn/ubuntu-releases/$releasever ;;
                 "aarch64") mirror=https://mirror.nju.edu.cn/ubuntu-cdimage/releases/$releasever/release ;;
                 esac
             else
                 case "$basearch" in
-                "x86_64") mirror=https://mirror.nju.edu.cn/ubuntu-releases/24.04/$releasever ;;
+                "x86_64") mirror=https://mirror.nju.edu.cn/ubuntu-releases/$releasever ;;
                 "aarch64") mirror=https://cdimage.ubuntu.com/releases/$releasever/release ;;
                 esac
             fi
@@ -1251,6 +1248,9 @@ Continue?
             # iso
             filename=$(curl -L $mirror | grep -oP "ubuntu-$releasever.*?-desktop-$basearch_alt.iso" |
                 sort -uV | tail -1 | grep .)
+            if [ -z "$filename" ]; then
+                error_and_exit "Desktop ISO not found for Ubuntu $releasever $basearch_alt"
+            fi
             iso=$mirror/$filename
             # 在 ubuntu 20.04 上，file 命令检测 ubuntu 22.04 iso 结果是 DOS/MBR boot sector
             test_url "$iso" iso
