@@ -1186,84 +1186,88 @@ Continue?
     }
 
     setos_ubuntu() {
-        case "$releasever" in
+    case "$releasever" in
         16.04) codename=xenial ;;
         18.04) codename=bionic ;;
         20.04) codename=focal ;;
         22.04) codename=jammy ;;
         24.04) codename=noble ;;
         24.10) codename=oracular ;; # non-lts
-        esac
+    esac
 
-        # 定义多个镜像源
+    # 定义多个镜像源，使用标准URL格式
     if is_in_china; then
         mirrors=(
-            "https://mirror.nju.edu.cn/ubuntu-releases/${releasever}"
-            "https://mirrors.tuna.tsinghua.edu.cn/ubuntu-releases/${releasever}"
-            "https://mirrors.ustc.edu.cn/ubuntu-releases/${releasever}"
-            "https://mirrors.aliyun.com/ubuntu-releases/${releasever}"
+            "https://mirror.nju.edu.cn/ubuntu-releases/${releasever}/"
+            "https://mirrors.tuna.tsinghua.edu.cn/ubuntu-releases/${releasever}/"
+            "https://mirrors.ustc.edu.cn/ubuntu-releases/${releasever}/"
+            "https://mirrors.aliyun.com/ubuntu-releases/${releasever}/"
         )
         
         if [ "$basearch" = "aarch64" ]; then
             mirrors=(
-                "https://mirror.nju.edu.cn/ubuntu-cdimage/releases/${releasever}/release"
-                "https://mirrors.tuna.tsinghua.edu.cn/ubuntu-cdimage/releases/${releasever}/release"
-                "https://mirrors.ustc.edu.cn/ubuntu-cdimage/releases/${releasever}/release"
+                "https://mirror.nju.edu.cn/ubuntu-cdimage/releases/${releasever}/release/"
+                "https://mirrors.tuna.tsinghua.edu.cn/ubuntu-cdimage/releases/${releasever}/release/"
+                "https://mirrors.ustc.edu.cn/ubuntu-cdimage/releases/${releasever}/release/"
             )
         fi
     else
         mirrors=(
-            "https://releases.ubuntu.com/${releasever}"
-            "https://mirror.nju.edu.cn/ubuntu-releases/${releasever}"
+            "https://releases.ubuntu.com/${releasever}/"
+            "https://mirror.nju.edu.cn/ubuntu-releases/${releasever}/"
         )
         
         if [ "$basearch" = "aarch64" ]; then
             mirrors=(
-                "https://cdimage.ubuntu.com/releases/${releasever}/release"
-                "https://mirror.nju.edu.cn/ubuntu-cdimage/releases/${releasever}/release"
+                "https://cdimage.ubuntu.com/releases/${releasever}/release/"
+                "https://mirror.nju.edu.cn/ubuntu-cdimage/releases/${releasever}/release/"
             )
         fi
     fi
 
-        # 尝试不同的镜像源
+    # 尝试不同的镜像源
     for mirror in "${mirrors[@]}"; do
-        info "Trying mirror: $mirror"
-        
-        # 添加延时，避免频繁请求
-        sleep 2
+        info "Trying mirror: ${mirror}"
         
         # 检查镜像源是否可访问
-        if ! curl -sIL --retry 3 --retry-delay 5 --connect-timeout 10 "$mirror" >/dev/null 2>&1; then
-            warn "Mirror $mirror is not accessible, trying next one..."
+        if ! curl -sIL --retry 3 --retry-delay 5 --connect-timeout 10 "${mirror}" >/dev/null 2>&1; then
+            warn "Mirror ${mirror} is not accessible, trying next one..."
             continue
         fi
+
         # 查找桌面版ISO
-        filename=$(curl -sL --retry 3 --retry-delay 5 --connect-timeout 10 "$mirror" 2>/dev/null | 
-            grep -o "ubuntu-${releasever}.*-desktop-${basearch_alt}\.iso" |
+        filename=$(curl -sL --retry 3 --retry-delay 5 --connect-timeout 10 "${mirror}" 2>/dev/null | 
+            grep -o "ubuntu-${releasever}[.0-9]*-desktop-${basearch_alt}\.iso" |
             sort -V | tail -n 1)
         
         if [ -n "$filename" ]; then
+            # 移除URL末尾的斜杠，避免双斜杠
+            mirror=${mirror%/}
             iso="${mirror}/${filename}"
+            
             # 验证ISO URL是否可访问
-            if curl -sIL --retry 3 --retry-delay 5 --connect-timeout 10 "$iso" >/dev/null 2>&1; then
-                info "Found valid ISO: $iso"
+            if curl -sIL --retry 3 --retry-delay 5 --connect-timeout 10 "${iso}" >/dev/null 2>&1; then
+                info "Found valid ISO: ${iso}"
                 break
             fi
         fi
         
-        warn "Could not find or access desktop ISO from $mirror, trying next one..."
+        warn "Could not find or access desktop ISO from ${mirror}, trying next one..."
     done
 
-        if [ -z "$filename" ] || [ -z "$iso" ]; then
+    if [ -z "$filename" ] || [ -z "$iso" ]; then
         error "Could not find accessible desktop ISO for Ubuntu ${releasever} ${basearch_alt} from any mirror."
         return 1
     fi
-    # 设置变量
-    eval "${step}_iso=\"$iso\""
-    eval "${step}_ks=\"$confhome/ubuntu.yaml\""
-    eval "${step}_minimal=0"  # 桌面版本不支持minimal
-    eval "${step}_codename=\"$codename\""
-    info "Successfully found Ubuntu desktop ISO: $iso"
+
+    # 设置变量，修正eval语句格式
+    eval "${step}_iso=${iso}"
+    eval "${step}_ks=${confhome}/ubuntu.yaml"
+    eval "${step}_minimal=0"
+    eval "${step}_codename=${codename}"
+
+    info "Successfully found Ubuntu desktop ISO: ${iso}"
+    return 0
 }
 
     setos_arch() {
