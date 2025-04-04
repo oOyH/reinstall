@@ -1196,55 +1196,64 @@ Continue?
         esac
 
         if is_in_china; then
-            case "$basearch" in
-            "x86_64") mirror=https://mirror.nju.edu.cn/ubuntu-releases/$releasever ;;
-            "aarch64") mirror=https://mirror.nju.edu.cn/ubuntu-cdimage/ubuntu/releases/$releasever/release ;;
-            esac
+            mirrors=(
+                "https://mirror.nju.edu.cn/ubuntu-releases/$releasever"
+                "https://mirrors.tuna.tsinghua.edu.cn/ubuntu-releases/$releasever"
+                "https://mirrors.ustc.edu.cn/ubuntu-releases/$releasever"
+                "https://mirrors.aliyun.com/ubuntu-releases/$releasever"
+            )
+            
+            if [ "$basearch" = "aarch64" ]; then
+                mirrors=(
+                    "https://mirror.nju.edu.cn/ubuntu-cdimage/releases/$releasever/release"
+                    "https://mirrors.tuna.tsinghua.edu.cn/ubuntu-cdimage/releases/$releasever/release"
+                    "https://mirrors.ustc.edu.cn/ubuntu-cdimage/releases/$releasever/release"
+                )
+            fi
         else
-            case "$basearch" in
-            "x86_64") mirror=https://releases.ubuntu.com/$releasever ;;
-            "aarch64") mirror=https://cdimage.ubuntu.com/ubuntu/releases/$releasever/release ;;
-            esac
+            mirrors=(
+                "https://releases.ubuntu.com/$releasever"
+                "https://mirror.nju.edu.cn/ubuntu-releases/$releasever"
+            )
+             if [ "$basearch" = "aarch64" ]; then
+                mirrors=(
+                    "https://cdimage.ubuntu.com/releases/$releasever/release"
+                    "https://mirror.nju.edu.cn/ubuntu-cdimage/releases/$releasever/release"
+                )
+            fi
         fi
-
-            if is_use_cloud_image; then
-            # 桌面版不支持minimal选项
-            if [ "$minimal" = 1 ]; then
-                warn "Desktop version does not support minimal image, switching to full desktop version."
-                minimal=0
-            fi
-            # 验证镜像源是否可用
-            if ! curl -sIL "$mirror" >/dev/null 2>&1; then
-                error_and_exit "Mirror $mirror is not accessible."
-            fi
+            for mirror in "${mirrors[@]}"; do
+            info "Trying mirror: $mirror"
+            
+            # 添加延时，避免频繁请求
+            sleep 2
+            
+            # 检查镜像源是否可访问
+            if ! curl -sIL --retry 3 --retry-delay 5 "$mirror" >/dev/null 2>&1; then
+                warn "Mirror $mirror is not accessible, trying next one..."
+                continue
+            }
             # 查找桌面版ISO
-            filename=$(curl -L $mirror | grep -oP "ubuntu-$releasever.*?-desktop-$basearch_alt.iso" |
+            filename=$(curl -L --retry 3 --retry-delay 5 "$mirror" | 
+                grep -oP "ubuntu-$releasever.*?-desktop-$basearch_alt.iso" |
                 sort -uV | tail -1 | grep .)
             
-            if [ -z "$filename" ]; then
-                error_and_exit "Desktop ISO not found for Ubuntu $releasever $basearch_alt"
+            if [ -n "$filename" ]; then
+                iso=$mirror/$filename
+                if test_url_grace "$iso" iso; then
+                    break
+                fi
             fi
-            iso=$mirror/$filename
-            test_url "$iso" iso
-            eval ${step}_iso=$iso
-            eval ${step}_ks=$confhome/ubuntu.yaml
-        else
-            # 传统安装
-            # 查找桌面版ISO
-            filename=$(curl -L $mirror | grep -oP "ubuntu-$releasever.*?-desktop-$basearch_alt.iso" |
-                sort -uV | tail -1 | grep .)
             
-            if [ -z "$filename" ]; then
-                error_and_exit "Desktop ISO not found for Ubuntu $releasever $basearch_alt"
-            fi
-            iso=$mirror/$filename
-            test_url "$iso" iso
-            eval ${step}_iso=$iso
-            eval ${step}_ks=$confhome/ubuntu.yaml
-        fi
-        # 设置通用变量
-        eval ${step}_minimal=$minimal
+            warn "Could not find or access desktop ISO from $mirror, trying next one..."
+        done
+            
+             # 设置变量
+        eval ${step}_iso=$iso
+        eval ${step}_ks=$confhome/ubuntu.yaml
+        eval ${step}_minimal=0  # 桌面版本不支持minimal
         eval ${step}_codename=$codename
+        info "Successfully found Ubuntu desktop ISO: $iso"
     }
 
 
