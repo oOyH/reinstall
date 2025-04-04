@@ -1204,7 +1204,7 @@ Continue?
                 #            https://mirror.nju.edu.cn/ubuntu-cloud-images/releases/
 
                 # mirrors.cloud.tencent.com
-                ci_mirror=https://mirror.nju.edu.cn/ubuntu-cloud-images
+                ci_mirror=https://mirror.nju.edu.cn/ubuntu-releases/24.04
             else
                 ci_mirror=https://cloud-images.ubuntu.com
             fi
@@ -1238,18 +1238,18 @@ Continue?
             # 传统安装
             if is_in_china; then
                 case "$basearch" in
-                "x86_64") mirror=https://mirror.nju.edu.cn/ubuntu-releases/$releasever ;;
+                "x86_64") mirror=https://mirror.nju.edu.cn/ubuntu-releases/24.04/$releasever ;;
                 "aarch64") mirror=https://mirror.nju.edu.cn/ubuntu-cdimage/releases/$releasever/release ;;
                 esac
             else
                 case "$basearch" in
-                "x86_64") mirror=https://releases.ubuntu.com/$releasever ;;
+                "x86_64") mirror=https://mirror.nju.edu.cn/ubuntu-releases/24.04/$releasever ;;
                 "aarch64") mirror=https://cdimage.ubuntu.com/releases/$releasever/release ;;
                 esac
             fi
 
             # iso
-            filename=$(curl -L $mirror | grep -oP "ubuntu-$releasever.*?-live-server-$basearch_alt.iso" |
+            filename=$(curl -L $mirror | grep -oP "ubuntu-$releasever.*?-desktop-$basearch_alt.iso" |
                 sort -uV | tail -1 | grep .)
             iso=$mirror/$filename
             # 在 ubuntu 20.04 上，file 命令检测 ubuntu 22.04 iso 结果是 DOS/MBR boot sector
