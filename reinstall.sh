@@ -1195,72 +1195,58 @@ Continue?
         24.10) codename=oracular ;; # non-lts
         esac
 
-        if is_use_cloud_image; then
-            # cloud image
-            if is_in_china; then
-                # 有的源没有 releases 镜像
-                # https://mirrors.tuna.tsinghua.edu.cn/ubuntu-cloud-images/releases/
-                #   https://unicom.mirrors.ustc.edu.cn/ubuntu-cloud-images/releases/
-                #            https://mirror.nju.edu.cn/ubuntu-cloud-images/releases/
+        if is_in_china; then
+            case "$basearch" in
+            "x86_64") mirror=https://mirror.nju.edu.cn/ubuntu-releases/$releasever ;;
+            "aarch64") mirror=https://mirror.nju.edu.cn/ubuntu-cdimage/ubuntu/releases/$releasever/release ;;
+            esac
+        else
+            case "$basearch" in
+            "x86_64") mirror=https://releases.ubuntu.com/$releasever ;;
+            "aarch64") mirror=https://cdimage.ubuntu.com/ubuntu/releases/$releasever/release ;;
+            esac
+        fi
 
-                # mirrors.cloud.tencent.com
-                ci_mirror=https://mirror.nju.edu.cn/ubuntu-releases
-            else
-                ci_mirror=https://releases.ubuntu.com
-            fi
-
-            # 以下版本有 minimal 镜像
-            # amd64 所有
-            # arm64 24.04 和以上
-            is_have_minimal_image() {
-                [ "$basearch_alt" = amd64 ] || [ "${releasever%.*}" -ge 24 ]
-            }
-
-            get_suffix() {
-                if [ "$releasever" = 16.04 ]; then
-                    if is_efi; then
-                        echo -uefi1
-                    else
-                        echo -disk1
-                    fi
-                fi
-            }
-
+            if is_use_cloud_image; then
+            # 桌面版不支持minimal选项
             if [ "$minimal" = 1 ]; then
                 warn "Desktop version does not support minimal image, switching to full desktop version."
                 minimal=0
             fi
-            # 修改为桌面版镜像命名格式
-            eval ${step}_img="$ci_mirror/$releasever/ubuntu-$releasever-desktop-$basearch_alt.iso"
-            # 传统安装
-            if is_in_china; then
-                case "$basearch" in
-                "x86_64") mirror=https://mirror.nju.edu.cn/ubuntu-releases/$releasever ;;
-                "aarch64") mirror=https://mirror.nju.edu.cn/ubuntu-cdimage/releases/$releasever/release ;;
-                esac
-            else
-                case "$basearch" in
-                "x86_64") mirror=https://mirror.nju.edu.cn/ubuntu-releases/$releasever ;;
-                "aarch64") mirror=https://cdimage.ubuntu.com/releases/$releasever/release ;;
-                esac
+            # 验证镜像源是否可用
+            if ! curl -sIL "$mirror" >/dev/null 2>&1; then
+                error_and_exit "Mirror $mirror is not accessible."
             fi
-
-            # iso
+            # 查找桌面版ISO
             filename=$(curl -L $mirror | grep -oP "ubuntu-$releasever.*?-desktop-$basearch_alt.iso" |
                 sort -uV | tail -1 | grep .)
+            
             if [ -z "$filename" ]; then
                 error_and_exit "Desktop ISO not found for Ubuntu $releasever $basearch_alt"
             fi
             iso=$mirror/$filename
-            # 在 ubuntu 20.04 上，file 命令检测 ubuntu 22.04 iso 结果是 DOS/MBR boot sector
             test_url "$iso" iso
             eval ${step}_iso=$iso
-
-            # ks
             eval ${step}_ks=$confhome/ubuntu.yaml
-            eval ${step}_minimal=$minimal
+        else
+            # 传统安装
+            # 查找桌面版ISO
+            filename=$(curl -L $mirror | grep -oP "ubuntu-$releasever.*?-desktop-$basearch_alt.iso" |
+                sort -uV | tail -1 | grep .)
+            
+            if [ -z "$filename" ]; then
+                error_and_exit "Desktop ISO not found for Ubuntu $releasever $basearch_alt"
+            fi
+            iso=$mirror/$filename
+            test_url "$iso" iso
+            eval ${step}_iso=$iso
+            eval ${step}_ks=$confhome/ubuntu.yaml
         fi
+        # 设置通用变量
+        eval ${step}_minimal=$minimal
+        eval ${step}_codename=$codename
     }
+
 
     setos_arch() {
         if [ "$basearch" = "x86_64" ]; then
