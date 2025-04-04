@@ -1232,7 +1232,7 @@ Continue?
             if ! curl -sIL --retry 3 --retry-delay 5 "$mirror" >/dev/null 2>&1; then
                 warn "Mirror $mirror is not accessible, trying next one..."
                 continue
-            }
+            fi
             # 查找桌面版ISO
             filename=$(curl -L --retry 3 --retry-delay 5 "$mirror" | 
                 grep -oP "ubuntu-$releasever.*?-desktop-$basearch_alt.iso" |
