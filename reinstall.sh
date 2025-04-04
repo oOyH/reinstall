@@ -1198,7 +1198,7 @@ Continue?
         # 定义多个镜像源
         if is_in_china; then
             mirrors=(
-                "https://mirror.nju.edu.cn/ubuntu-releases/$releasever"
+                #"https://mirror.nju.edu.cn/ubuntu-releases/$releasever"
                 "https://mirrors.tuna.tsinghua.edu.cn/ubuntu-releases/$releasever"
                 "https://mirrors.ustc.edu.cn/ubuntu-releases/$releasever"
                 "https://mirrors.aliyun.com/ubuntu-releases/$releasever"
@@ -1214,7 +1214,7 @@ Continue?
         else
             mirrors=(
                 "https://releases.ubuntu.com/$releasever"
-                "https://mirror.nju.edu.cn/ubuntu-releases/$releasever"
+                "https://mirrors.tuna.tsinghua.edu.cn/ubuntu-releases/$releasever"
             )
             
             if [ "$basearch" = "aarch64" ]; then
